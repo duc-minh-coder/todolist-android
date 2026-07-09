@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    tools:context=".fragment.RegisterFragment">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:paddingTop="50dp"
+        android:paddingBottom="50dp">
+
+        <ImageView
+            android:id="@+id/img_header"
+            android:layout_width="250dp"
+            android:layout_height="200dp"
+            android:src="@drawable/img_1"
+            android:contentDescription="Illustration" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Hoàn thành công việc với on.time"
+            android:textColor="@color/text_primary"
+            android:textSize="20sp"
+            android:textStyle="bold"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Hãy cùng hoàn thành công việc của bạn nào"
+            android:textColor="@color/text_secondary"
+            android:textSize="16sp" />
+
+        <EditText
+            android:id="@+id/edt_reg_name"
+            style="@style/AuthInputStyle"
+            android:layout_marginTop="24dp"
+            android:hint="Nhập họ tên"
+            android:inputType="textPersonName" />
+
+        <EditText
+            android:id="@+id/edt_reg_email"
+            style="@style/AuthInputStyle"
+            android:layout_marginTop="16dp"
+            android:hint="Nhập email"
+            android:inputType="textEmailAddress" />
+
+        <EditText
+            android:id="@+id/edt_reg_password"
+            style="@style/AuthInputStyle"
+            android:layout_marginTop="16dp"
+            android:hint="Nhập mật khẩu"
+            android:inputType="textPassword" />
+
+        <EditText
+            android:id="@+id/edt_reg_confirm_password"
+            style="@style/AuthInputStyle"
+            android:layout_marginTop="16dp"
+            android:hint="Xác nhận mật khẩu"
+            android:inputType="textPassword" />
+
+        <Button
+            android:id="@+id/btn_register"
+            style="@style/AuthButtonStyle"
+            android:layout_marginTop="32dp"
+            android:text="Đăng kí" />
+
+        <TextView
+            android:id="@+id/tv_go_to_login"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="32dp"
+            android:text="@string/register_prompt_login"
+            android:textColor="@color/text_secondary"
+            android:textSize="16sp" />
+
+    </LinearLayout>
+</ScrollView>

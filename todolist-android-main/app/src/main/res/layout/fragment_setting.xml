@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="@color/white"
+    tools:context=".fragment.SettingFragment">
+
+    <!-- Thanh tiêu đề -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginLeft="10dp"
+        android:gravity="center_vertical">
+
+        <ImageView
+            android:id="@+id/btnBack"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_arrow_back"
+            android:contentDescription="Back" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Cài đặt"
+            android:textSize="15sp"
+            android:textStyle="normal"
+            android:textColor="@color/black"
+            android:layout_marginStart="3dp" />
+    </LinearLayout>
+
+    <!-- Tiêu đề nhóm -->
+    <TextView
+        android:id="@+id/btn_Thongbao"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Thông báo"
+        android:textStyle="bold"
+        android:textSize="16sp"
+        android:textColor="@color/black"
+        android:layout_marginLeft="10dp"
+        android:layout_marginTop="24dp"
+        android:layout_marginBottom="8dp" />
+
+    <!-- Dòng Âm thanh -->
+    <TextView
+        android:id="@+id/btn_Amthanh"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Âm thanh"
+        android:textSize="15sp"
+        android:paddingVertical="12dp"
+        android:layout_marginLeft="10dp"
+        android:textColor="@color/black"
+        android:background="?android:attr/selectableItemBackground" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#DDDDDD" />
+
+    <!-- Dòng Thanh thông báo -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingVertical="12dp"
+        android:background="?android:attr/selectableItemBackground">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="@color/black"
+            android:text="Thanh thông báo"
+            android:layout_marginLeft="10dp"
+            android:textSize="15sp" />
+
+        <Switch
+            android:id="@+id/switchThongBao"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:trackTint="@color/primary"
+            tools:ignore="UseSwitchCompatOrMaterialXml" />
+    </LinearLayout>
+
+    <!-- Các mục khác -->
+    <TextView
+        android:id="@+id/btn_Trogiup"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Trợ giúp"
+        android:textColor="@color/black"
+        android:textSize="15sp"
+        android:layout_marginLeft="10dp"
+        android:paddingVertical="12dp"
+        android:background="?android:attr/selectableItemBackground" />
+
+    <TextView
+        android:id="@+id/btn_Vechungtoi"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Về chúng tôi"
+        android:textColor="@color/black"
+        android:textSize="15sp"
+        android:layout_marginLeft="10dp"
+        android:paddingVertical="12dp"
+        android:background="?android:attr/selectableItemBackground" />
+
+    <TextView
+        android:id="@+id/btn_Taikhoan"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Tài khoản"
+        android:textColor="@color/black"
+        android:textSize="15sp"
+        android:layout_marginLeft="10dp"
+        android:paddingVertical="12dp"
+        android:background="?android:attr/selectableItemBackground" />
+
+</LinearLayout>

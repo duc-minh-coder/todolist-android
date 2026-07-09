@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Todo-list</string>
+    <string name="login_prompt_register">Bạn chưa có tài khoản ? <b>Đăng Kí</b></string>
+    <string name="register_prompt_login">Đã có tài khoản? <b>Đăng nhập</b></string>
+</resources>

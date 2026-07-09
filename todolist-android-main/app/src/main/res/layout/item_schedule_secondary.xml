@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="16dp">
+
+    <TextView
+        android:id="@+id/tv_schedule_day"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:background="@drawable/bg_day_circle"
+        android:gravity="center"
+        android:textColor="@color/white"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:text="20" />
+
+    <androidx.cardview.widget.CardView
+        android:id="@+id/card_schedule_item"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        app:cardBackgroundColor="@color/second"
+        app:cardCornerRadius="10dp"
+        app:cardElevation="0dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/tv_schedule_day"
+        app:layout_constraintTop_toTopOf="@id/tv_schedule_day"
+        app:layout_constraintBottom_toBottomOf="parent" >
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <TextView
+                    android:id="@+id/tv_schedule_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentStart="true"
+                    android:layout_centerVertical="true"
+                    android:layout_toStartOf="@+id/checkbox_schedule_complete"
+                    android:textColor="@color/text_primary"
+                    android:textSize="18sp"
+                    android:textFontWeight="600"
+                    tools:text="Họp nhóm bài tập lớn" />
+
+                <CheckBox
+                    android:id="@+id/checkbox_schedule_complete"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:buttonTint="#C68AFF"
+                    android:minWidth="0dp"
+                    android:minHeight="0dp"/>
+
+            </RelativeLayout>
+
+            <View
+                android:id="@+id/divider"
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#C68AFF"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="8dp" />
+
+            <GridLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:columnCount="2"
+                android:rowCount="3">
+
+                <TextView
+                    android:layout_column="0"
+                    android:layout_row="0"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Thời gian:"
+                    android:textColor="@color/text_primary"
+                    android:textFontWeight="600"
+                    android:textSize="14sp"
+                    android:layout_marginEnd="8dp"/>
+
+                <TextView
+                    android:id="@+id/tv_schedule_time"
+                    android:layout_column="1"
+                    android:layout_row="0"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_columnWeight="1"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp"
+                    tools:text="07.00 - 10.00" />
+
+                <TextView
+                    android:layout_column="0"
+                    android:layout_row="1"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Địa điểm:"
+                    android:textColor="@color/text_primary"
+                    android:textFontWeight="600"
+                    android:textSize="14sp"
+                    android:layout_marginEnd="8dp"
+                    android:layout_marginTop="4dp"/>
+
+                <TextView
+                    android:id="@+id/tv_schedule_place"
+                    android:layout_column="1"
+                    android:layout_row="1"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_columnWeight="1"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp"
+                    android:layout_marginTop="4dp"
+                    tools:text="Quán nước" />
+
+                <TextView
+                    android:layout_column="0"
+                    android:layout_row="2"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Ghi chú:"
+                    android:textColor="@color/text_primary"
+                    android:textFontWeight="600"
+                    android:textSize="14sp"
+                    android:layout_marginEnd="8dp"
+                    android:layout_marginTop="4dp"/>
+
+                <TextView
+                    android:id="@+id/tv_schedule_notes"
+                    android:layout_column="1"
+                    android:layout_row="2"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_columnWeight="1"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp"
+                    android:layout_marginTop="4dp"
+                    tools:text="Không có" />
+
+<!--                <TextView-->
+<!--                    android:layout_column="0"-->
+<!--                    android:layout_row="3"-->
+<!--                    android:layout_width="wrap_content"-->
+<!--                    android:layout_height="wrap_content"-->
+<!--                    android:text="Số người tham gia:"-->
+<!--                    android:textColor="@color/text_primary"-->
+<!--                    android:textFontWeight="600"-->
+<!--                    android:textSize="14sp"-->
+<!--                    android:layout_marginEnd="8dp"-->
+<!--                    android:layout_marginTop="4dp"/>-->
+
+<!--                <TextView-->
+<!--                    android:id="@+id/tv_schedule_count_user"-->
+<!--                    android:layout_column="1"-->
+<!--                    android:layout_row="3"-->
+<!--                    android:layout_width="0dp"-->
+<!--                    android:layout_height="wrap_content"-->
+<!--                    android:layout_columnWeight="1"-->
+<!--                    android:textColor="@color/text_primary"-->
+<!--                    android:textSize="14sp"-->
+<!--                    android:layout_marginTop="4dp"-->
+<!--                    tools:text="1" />-->
+
+            </GridLayout>
+        </LinearLayout>
+
+    </androidx.cardview.widget.CardView>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

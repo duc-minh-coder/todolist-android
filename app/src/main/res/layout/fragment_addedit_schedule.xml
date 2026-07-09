@@ -1,0 +1,296 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/img_background"
+    tools:context=".fragment.AddEditScheduleFragment">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:paddingHorizontal="16dp">
+        <ImageView
+            android:id="@+id/btn_back_schedule"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_arrow_back"
+            app:tint="@color/primary"
+            android:layout_alignParentStart="true"
+            android:layout_centerVertical="true"
+            android:padding="8dp"
+            android:background="?attr/selectableItemBackgroundBorderless"/>
+
+        <CheckBox
+            android:id="@+id/checkbox_complete_top"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_toStartOf="@id/btn_save_schedule"
+            android:layout_centerVertical="true"
+            android:layout_marginEnd="16dp"
+            android:buttonTint="@color/primary"/>
+
+        <ImageView
+            android:id="@+id/btn_save_schedule"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/img_icon_tick"
+            app:tint="@color/primary"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:padding="8dp"
+            android:background="?attr/selectableItemBackgroundBorderless"/>
+    </RelativeLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="24dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Lịch trình"
+                android:textColor="@color/text_secondary"
+                android:textSize="14sp"/>
+
+            <EditText
+                android:id="@+id/edt_schedule_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Tiêu đề"
+                android:textColor="@color/text_primary"
+                android:textColorHint="@color/text_secondary"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:background="@drawable/bg_addedit_input" android:padding="16dp"
+                android:layout_marginTop="8dp"/>
+
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentStart="true"
+                    android:layout_centerVertical="true"
+                    android:text="Cả ngày"
+                    android:textColor="@color/text_primary"
+                    android:textSize="16sp"/>
+
+                <androidx.appcompat.widget.SwitchCompat
+                    android:id="@+id/switch_all_day"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:thumbTint="@color/primary"
+                    android:trackTint="@color/second"/>
+            </RelativeLayout>
+
+            <RelativeLayout
+                android:id="@+id/layout_start_time"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentStart="true"
+                    android:layout_centerVertical="true"
+                    android:text="Bắt đầu từ"
+                    android:textColor="@color/text_primary"
+                    android:textSize="16sp"/>
+
+                <TextView
+                    android:id="@+id/tv_start_time"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_toStartOf="@id/iv_arrow_start"
+                    android:layout_centerVertical="true"
+                    android:layout_marginEnd="8dp"
+                    android:textColor="@color/primary"
+                    android:textSize="16sp"
+                    tools:text="T2, 20 Tháng 9 2021 07:00"/>
+
+                <ImageView
+                    android:id="@+id/iv_arrow_start"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:src="@drawable/ic_chevron_right" app:tint="@color/text_secondary" />
+            </RelativeLayout>
+
+            <RelativeLayout
+                android:id="@+id/layout_end_time"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentStart="true"
+                    android:layout_centerVertical="true"
+                    android:text="Kết thúc"
+                    android:textColor="@color/text_primary"
+                    android:textSize="16sp"/>
+
+                <TextView
+                    android:id="@+id/tv_end_time"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_toStartOf="@id/iv_arrow_end"
+                    android:layout_centerVertical="true"
+                    android:layout_marginEnd="8dp"
+                    android:textColor="@color/primary"
+                    android:textSize="16sp"
+                    tools:text="T2, 20 Tháng 9 2021 10:00"/>
+
+                <ImageView
+                    android:id="@+id/iv_arrow_end"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:src="@drawable/ic_chevron_right"
+                    app:tint="@color/text_secondary" />
+            </RelativeLayout>
+
+            <RelativeLayout
+                android:id="@+id/layout_repeat"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentStart="true"
+                    android:layout_centerVertical="true"
+                    android:text="Lặp lại"
+                    android:textColor="@color/text_primary"
+                    android:textSize="16sp"/>
+
+                <androidx.appcompat.widget.SwitchCompat
+                    android:id="@+id/switch_repeat"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:thumbTint="@color/primary"
+                    android:trackTint="@color/second"/>
+            </RelativeLayout>
+
+            <RelativeLayout
+                android:id="@+id/layout_alarm"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp">
+
+                <TextView
+                    android:id="@+id/tv_alarm_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentStart="true"
+                    android:layout_centerVertical="true"
+                    android:text="Báo thức"
+                    android:textColor="@color/text_primary"
+                    android:textSize="16sp"/>
+
+                <Spinner
+                    android:id="@+id/spinner_alarm"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:layout_toEndOf="@id/tv_alarm_label"
+                    android:layout_centerVertical="true"
+                    android:layout_marginStart="16dp"
+                    android:gravity="end"
+                    android:textAlignment="viewEnd"
+                    android:background="@android:color/transparent"
+                    android:spinnerMode="dropdown"
+                    android:entries="@array/alarm_options" /> </RelativeLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="24dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Người tham gia"
+                    android:textColor="@color/text_primary"
+                    android:textSize="16sp"/>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="8dp"
+                    android:gravity="center_vertical">
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/recycler_view_invited_users"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="horizontal"
+                        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                        tools:listitem="@layout/item_user_search"
+                        android:minHeight="40dp"/>
+
+                    <ImageView
+                        android:id="@+id/btn_show_invite_dialog"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/ic_add"
+                        app:tint="@color/primary"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:padding="4dp"
+                        android:layout_marginStart="8dp"/>
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <EditText
+                android:id="@+id/edt_schedule_place"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Địa điểm"
+                android:textColor="@color/text_primary"
+                android:textColorHint="@color/text_secondary"
+                android:textSize="16sp"
+                android:background="@drawable/bg_addedit_input"
+                android:padding="16dp"
+                android:layout_marginTop="24dp"/>
+
+            <EditText
+                android:id="@+id/edt_schedule_notes"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Ghi chú"
+                android:textColor="@color/text_primary"
+                android:textColorHint="@color/text_secondary"
+                android:textSize="16sp"
+                android:background="@drawable/bg_addedit_input"
+                android:padding="16dp"
+                android:layout_marginTop="16dp"
+                android:minHeight="100dp"
+                android:gravity="top"/>
+
+        </LinearLayout>
+    </ScrollView>
+
+</LinearLayout>
