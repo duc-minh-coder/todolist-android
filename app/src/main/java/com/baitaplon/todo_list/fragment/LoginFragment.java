@@ -17,18 +17,16 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
 import com.baitaplon.todo_list.R;
-import com.baitaplon.todo_list.activity.AuthActivity;
 import com.baitaplon.todo_list.activity.MainActivity;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.firestore.FirebaseFirestore;
+import com.baitaplon.todo_list.activity.AuthActivity;
+import com.baitaplon.todo_list.data.local.LocalAuthRepository;
+import com.baitaplon.todo_list.model.User;
 
 public class LoginFragment extends Fragment {
     TextView tvGoToRegister;
     EditText edtEmail, edtPassword;
     Button btnLogin;
-    private FirebaseAuth mAuth;
-    private FirebaseFirestore db;
+    private LocalAuthRepository authRepository;
 
     @Nullable
     @Override
@@ -39,8 +37,7 @@ public class LoginFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        mAuth = FirebaseAuth.getInstance();
-        db = FirebaseFirestore.getInstance();
+        authRepository = LocalAuthRepository.getInstance(requireContext());
 
         edtEmail = view.findViewById(R.id.edt_login_email);
         edtPassword = view.findViewById(R.id.edt_login_password);
@@ -72,42 +69,32 @@ public class LoginFragment extends Fragment {
             return;
         }
 
-        mAuth.signInWithEmailAndPassword(email, pass)
-                .addOnCompleteListener(requireActivity(), task -> {
-                    if (task.isSuccessful()) {
-                        FirebaseUser firebaseUser = mAuth.getCurrentUser();
-                        if (firebaseUser != null) {
-                            String uid = firebaseUser.getUid();
-                            fetchUserFromFirestore(uid);
+        authRepository.login(email, pass, new LocalAuthRepository.Callback<User>() {
+            @Override
+            public void onSuccess(User user) {
+                if (!isAdded()) {
+                    return;
+                }
 
-                        } else {
-                            Toast.makeText(getContext(), "Lỗi: Không lấy được thông tin người dùng.", Toast.LENGTH_SHORT).show();
-                        }
-                    } else {
-                        Toast.makeText(getContext(), "Đăng nhập thất bại: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
+                requireActivity().runOnUiThread(() -> {
+                    String username = user.getUsername();
+                    if (username == null || username.isEmpty()) {
+                        username = "Người dùng";
                     }
+                    saveUidAndGoToMain(user.getUid(), username);
                 });
-    }
+            }
 
-    private void fetchUserFromFirestore(String uid) {
-        db.collection("users").document(uid).get()
-                .addOnSuccessListener(documentSnapshot -> {
-                    if (documentSnapshot.exists()) {
-                        String username = documentSnapshot.getString("username");
+            @Override
+            public void onError(String message) {
+                if (!isAdded()) {
+                    return;
+                }
 
-                        if (username == null || username.isEmpty()) {
-                            username = "Người dùng";
-                        }
-
-                        saveUidAndGoToMain(uid, username);
-
-                    } else {
-                        Toast.makeText(getContext(), "Lỗi: Không tìm thấy hồ sơ người dùng trong CSDL.", Toast.LENGTH_LONG).show();
-                    }
-                })
-                .addOnFailureListener(e -> {
-                    Toast.makeText(getContext(), "Lỗi khi tải hồ sơ: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                });
+                requireActivity().runOnUiThread(() ->
+                        Toast.makeText(getContext(), message, Toast.LENGTH_LONG).show());
+            }
+        });
     }
 
 

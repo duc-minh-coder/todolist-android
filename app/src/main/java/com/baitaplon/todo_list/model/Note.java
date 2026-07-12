@@ -1,16 +1,22 @@
 package com.baitaplon.todo_list.model;
 
-import com.google.firebase.Timestamp;
-import com.google.firebase.firestore.ServerTimestamp;
+import androidx.room.Entity;
+import androidx.room.PrimaryKey;
+import androidx.annotation.NonNull;
+
+import java.util.Date;
 import java.util.List;
 
+@Entity(tableName = "notes")
 public class Note {
+    @PrimaryKey
+    @NonNull
     private String id;
     private String title;
     private String content;
     private String creatorId;
-    private @ServerTimestamp Timestamp createdAt;
-    private @ServerTimestamp Timestamp lastEdited;
+    private Date createdAt;
+    private Date lastEdited;
 
     private boolean isPinned;
     private String lastEditedBy; // Tên người chỉnh sửa cuối cùng
@@ -32,11 +38,11 @@ public class Note {
     public String getCreatorId() { return creatorId; }
     public void setCreatorId(String creatorId) { this.creatorId = creatorId; }
 
-    public Timestamp getCreatedAt() { return createdAt; }
-    public void setCreatedAt(Timestamp createdAt) { this.createdAt = createdAt; }
+    public Date getCreatedAt() { return createdAt; }
+    public void setCreatedAt(Date createdAt) { this.createdAt = createdAt; }
 
-    public Timestamp getLastEdited() { return lastEdited; }
-    public void setLastEdited(Timestamp lastEdited) { this.lastEdited = lastEdited; }
+    public Date getLastEdited() { return lastEdited; }
+    public void setLastEdited(Date lastEdited) { this.lastEdited = lastEdited; }
 
     public boolean isPinned() { return isPinned; }
     public void setPinned(boolean pinned) { isPinned = pinned; }

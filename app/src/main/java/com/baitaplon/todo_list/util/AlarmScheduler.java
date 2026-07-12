@@ -6,13 +6,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 import android.util.Log;
-import android.widget.Toast;
-
 import com.baitaplon.todo_list.model.Schedule;
 import com.baitaplon.todo_list.receiver.ScheduleAlarmReceiver;
-import com.google.firebase.Timestamp;
-
-import java.util.Calendar;
 import java.util.Date;
 
 public class AlarmScheduler {
@@ -51,7 +46,7 @@ public class AlarmScheduler {
         long triggerAtMillis = 0;
         if (schedule.getStartTime() == null) return; // Không có thời gian, không báo thức
 
-        long startTimeMillis = schedule.getStartTime().toDate().getTime();
+        long startTimeMillis = schedule.getStartTime().getTime();
 
         // Lấy thời gian hiện tại
         long nowMillis = System.currentTimeMillis();

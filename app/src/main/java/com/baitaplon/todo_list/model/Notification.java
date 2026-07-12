@@ -1,14 +1,16 @@
 package com.baitaplon.todo_list.model;
 
-import com.google.firebase.Timestamp;
-import com.google.firebase.firestore.DocumentId;
-import com.google.firebase.firestore.ServerTimestamp;
+import androidx.room.Entity;
+import androidx.room.PrimaryKey;
+import androidx.annotation.NonNull;
 
 import java.util.Date;
 
+@Entity(tableName = "notifications")
 public class Notification {
 
-    @DocumentId
+    @PrimaryKey
+    @NonNull
     private String id;
 
     private String userId; // Người nhận
@@ -17,7 +19,6 @@ public class Notification {
     private String referenceId; // ID của invitation hoặc schedule liên quan
     private boolean isRead;
 
-    @ServerTimestamp
     private Date createdAt; // Thời gian tạo
 
     public Notification() {

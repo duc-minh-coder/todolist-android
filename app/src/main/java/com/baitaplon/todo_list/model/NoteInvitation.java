@@ -1,9 +1,13 @@
 package com.baitaplon.todo_list.model;
 
-import com.google.firebase.firestore.DocumentId;
+import androidx.room.Entity;
+import androidx.room.PrimaryKey;
+import androidx.annotation.NonNull;
 
+@Entity(tableName = "note_invitations")
 public class NoteInvitation {
-    @DocumentId
+    @PrimaryKey
+    @NonNull
     private String id;
     private String noteId;
     private String hostId;

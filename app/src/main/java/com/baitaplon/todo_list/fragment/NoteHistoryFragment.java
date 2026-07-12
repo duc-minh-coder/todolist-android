@@ -18,19 +18,15 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.baitaplon.todo_list.R;
+import com.baitaplon.todo_list.data.local.LocalDataStore;
 import com.baitaplon.todo_list.adapter.NoteHistoryAdapter;
+import com.baitaplon.todo_list.model.Note;
 import com.baitaplon.todo_list.model.NoteVersion;
-import com.google.firebase.firestore.FieldValue;
-import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.ListenerRegistration;
-import com.google.firebase.firestore.Query;
-import com.google.firebase.firestore.QueryDocumentSnapshot;
-import com.google.firebase.firestore.WriteBatch;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.HashMap;
+import java.util.Date;
+import java.util.UUID;
 
 public class NoteHistoryFragment extends Fragment implements NoteHistoryAdapter.OnHistoryItemClickListener {
 
@@ -42,8 +38,7 @@ public class NoteHistoryFragment extends Fragment implements NoteHistoryAdapter.
     private NoteHistoryAdapter adapter;
     private List<NoteVersion> versionList = new ArrayList<>();
 
-    private FirebaseFirestore db;
-    private ListenerRegistration historyListener;
+    private LocalDataStore localDataStore;
     private String noteId;
     private String currentUserId, currentUserName;
 
@@ -57,7 +52,7 @@ public class NoteHistoryFragment extends Fragment implements NoteHistoryAdapter.
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        db = FirebaseFirestore.getInstance();
+        localDataStore = LocalDataStore.getInstance(requireContext());
         SharedPreferences sharedPreferences = requireActivity().getSharedPreferences("AppPreferences", Context.MODE_PRIVATE);
         currentUserId = sharedPreferences.getString("current_user_id", null);
         currentUserName = sharedPreferences.getString("current_user_name", "Bạn");
@@ -89,71 +84,46 @@ public class NoteHistoryFragment extends Fragment implements NoteHistoryAdapter.
     }
 
     private void loadHistory() {
-        if (historyListener != null) historyListener.remove();
-
-        // Query: Lấy các phiên bản, SẮP XẾP MỚI NHẤT LÊN TRÊN
-        Query historyQuery = db.collection("notes").document(noteId)
-                .collection("versions")
-                .orderBy("editedAt", Query.Direction.DESCENDING);
-
-        historyListener = historyQuery.addSnapshotListener((snapshots, e) -> {
-            if (e != null) {
-                Log.e(TAG, "Listen failed for history.", e);
-                return;
-            }
-
-            versionList.clear();
-            if (snapshots != null) {
-                for (QueryDocumentSnapshot doc : snapshots) {
-                    NoteVersion version = doc.toObject(NoteVersion.class);
-                    version.setId(doc.getId());
-                    versionList.add(version);
-                }
-            }
-
-            adapter.setData(versionList);
-            tvNoHistory.setVisibility(versionList.isEmpty() ? View.VISIBLE : View.GONE);
-        });
+        versionList.clear();
+        List<NoteVersion> storedVersions = localDataStore.noteVersions().getByNoteId(noteId);
+        if (storedVersions != null) {
+            versionList.addAll(storedVersions);
+        }
+        adapter.setData(versionList);
+        tvNoHistory.setVisibility(versionList.isEmpty() ? View.VISIBLE : View.GONE);
     }
 
     @Override
     public void onRollbackClick(NoteVersion version) {
-        // Khi rollback, chúng ta thực hiện 2 việc:
-        // 1. Cập nhật ghi chú gốc (main note) về nội dung của phiên bản (version) này.
-        // 2. Tạo một phiên bản (version) MỚI để ghi lại hành động "Rollback" này.
+        Note note = localDataStore.notes().findById(noteId);
+        if (note == null) {
+            Toast.makeText(getContext(), "Không tìm thấy ghi chú", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
-        WriteBatch batch = db.batch();
+        note.setTitle(version.getTitle());
+        note.setContent(version.getContent());
+        note.setLastEditedBy(currentUserName + " (Khôi phục)");
+        note.setLastEdited(new Date());
+        localDataStore.notes().insert(note);
 
-        // 1. Cập nhật note gốc
-        Map<String, Object> updates = new HashMap<>();
-        updates.put("title", version.getTitle());
-        updates.put("content", version.getContent());
-        updates.put("lastEditedBy", currentUserName + " (Khôi phục)");
-        updates.put("lastEdited", FieldValue.serverTimestamp());
-        batch.update(db.collection("notes").document(noteId), updates);
-
-        // 2. Tạo phiên bản mới (cho hành động rollback)
         NoteVersion rollbackVersion = new NoteVersion(
-                noteId,
-                version.getTitle(),
-                version.getContent(),
-                currentUserId,
-                currentUserName + " (Khôi phục)"
+            noteId,
+            version.getTitle(),
+            version.getContent(),
+            currentUserId,
+            currentUserName + " (Khôi phục)"
         );
-        batch.set(db.collection("notes").document(noteId).collection("versions").document(), rollbackVersion);
+        rollbackVersion.setId(UUID.randomUUID().toString());
+        rollbackVersion.setEditedAt(new Date());
+        localDataStore.noteVersions().insert(rollbackVersion);
 
-        // Commit batch
-        batch.commit()
-                .addOnSuccessListener(aVoid -> {
-                    Toast.makeText(getContext(), "Đã khôi phục phiên bản", Toast.LENGTH_SHORT).show();
-                    // Listener sẽ tự cập nhật UI, không cần thoát
-                })
-                .addOnFailureListener(e -> Toast.makeText(getContext(), "Lỗi khôi phục", Toast.LENGTH_SHORT).show());
+        Toast.makeText(getContext(), "Đã khôi phục phiên bản", Toast.LENGTH_SHORT).show();
+        loadHistory();
     }
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        if (historyListener != null) historyListener.remove();
     }
 }

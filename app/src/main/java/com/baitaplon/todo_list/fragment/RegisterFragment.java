@@ -15,17 +15,16 @@ import androidx.fragment.app.Fragment;
 
 import com.baitaplon.todo_list.R;
 import com.baitaplon.todo_list.activity.AuthActivity;
+import com.baitaplon.todo_list.data.local.LocalAuthRepository;
 import com.baitaplon.todo_list.model.User;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.firestore.FirebaseFirestore;
+
+import java.util.UUID;
 
 public class RegisterFragment extends Fragment {
     TextView tvGoToLogin;
     EditText edtFullName, edtEmail, edtPassword, edtConfirmPassword;
     Button btnRegister;
-    private FirebaseAuth mAuth;
-    private FirebaseFirestore db;
+    private LocalAuthRepository authRepository;
 
     @Nullable
     @Override
@@ -37,8 +36,7 @@ public class RegisterFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         initUI(view);
-        mAuth = FirebaseAuth.getInstance();
-        db = FirebaseFirestore.getInstance();
+        authRepository = LocalAuthRepository.getInstance(requireContext());
 
         tvGoToLogin.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -72,36 +70,34 @@ public class RegisterFragment extends Fragment {
             return;
         }
 
-        mAuth.createUserWithEmailAndPassword(email, password)
-                        .addOnCompleteListener(requireActivity(), task -> {
-                            if(task.isSuccessful()){
-                                // Đăng ký thành công trên Authentication
-                                FirebaseUser firebaseUser = mAuth.getCurrentUser();
-                                if(firebaseUser != null){
-                                    String uid = firebaseUser.getUid();
+        String uid = UUID.randomUUID().toString();
+        authRepository.register(uid, username, email, password, new LocalAuthRepository.Callback<User>() {
+            @Override
+            public void onSuccess(User user) {
+                if (!isAdded()) {
+                    return;
+                }
 
-                                    User newUser = new User(username, email);
-                                    //save user vao firebase
-                                    db.collection("users").document(uid).set(newUser)
-                                            .addOnSuccessListener(aVoid ->{
-                                                Toast.makeText(getContext(), "Đăng ký thành công", Toast.LENGTH_SHORT).show();
-                                                edtFullName.setText("");
-                                                edtEmail.setText("");
-                                                edtPassword.setText("");
-                                                edtConfirmPassword.setText("");
-                                                ((AuthActivity) getActivity()).goToLoginFragment();
-                                            })
-                                            .addOnFailureListener(e->{
-                                                Toast.makeText(getContext(), "Lỗi khi lưu thông tin user: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                                            });
-                                }else{
-                                    Toast.makeText(getContext(), "Lỗi: Không lấy được thông tin người dùng.", Toast.LENGTH_SHORT).show();
-                                }
-                            }else{
-                                // Đăng ký thất bại (email đã tồn tại, mật khẩu yếu,...)
-                                Toast.makeText(getContext(), "Đăng ký thất bại: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
-                            }
-                        });
+                requireActivity().runOnUiThread(() -> {
+                    Toast.makeText(getContext(), "Đăng ký thành công", Toast.LENGTH_SHORT).show();
+                    edtFullName.setText("");
+                    edtEmail.setText("");
+                    edtPassword.setText("");
+                    edtConfirmPassword.setText("");
+                    ((AuthActivity) getActivity()).goToLoginFragment();
+                });
+            }
+
+            @Override
+            public void onError(String message) {
+                if (!isAdded()) {
+                    return;
+                }
+
+                requireActivity().runOnUiThread(() ->
+                        Toast.makeText(getContext(), message, Toast.LENGTH_SHORT).show());
+            }
+        });
     }
 
     private void initUI(View view) {
