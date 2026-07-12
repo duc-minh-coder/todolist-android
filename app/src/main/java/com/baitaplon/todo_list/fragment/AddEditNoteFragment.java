@@ -24,21 +24,19 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.baitaplon.todo_list.R;
+import com.baitaplon.todo_list.data.local.LocalDataStore;
 import com.baitaplon.todo_list.adapter.InvitedUserAdapter;
 import com.baitaplon.todo_list.model.Note;
 import com.baitaplon.todo_list.model.NoteInvitation;
 import com.baitaplon.todo_list.model.NoteVersion;
 import com.baitaplon.todo_list.model.User;
-import com.google.firebase.firestore.DocumentReference;
-import com.google.firebase.firestore.FieldValue;
-import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.QueryDocumentSnapshot;
-import com.google.firebase.firestore.WriteBatch;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Date;
+import java.util.UUID;
 
 public class AddEditNoteFragment extends Fragment implements InvitedUserAdapter.OnRemoveUserClickListener{
 
@@ -46,7 +44,7 @@ public class AddEditNoteFragment extends Fragment implements InvitedUserAdapter.
 
     private Toolbar toolbar;
     private EditText etTitle, etContent;
-    private FirebaseFirestore db;
+    private LocalDataStore localDataStore;
     private String currentUserId, currentUserName;
 
     private String noteId; // Null nếu là note mới
@@ -69,7 +67,7 @@ public class AddEditNoteFragment extends Fragment implements InvitedUserAdapter.
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        db = FirebaseFirestore.getInstance();
+        localDataStore = LocalDataStore.getInstance(requireContext());
         SharedPreferences sharedPreferences = requireActivity().getSharedPreferences("AppPreferences", Context.MODE_PRIVATE);
         currentUserId = sharedPreferences.getString("current_user_id", null);
         currentUserName = sharedPreferences.getString("current_user_name", "Bạn");
@@ -109,27 +107,19 @@ public class AddEditNoteFragment extends Fragment implements InvitedUserAdapter.
     }
 
     private void loadNote() {
-        db.collection("notes").document(noteId).get()
-                .addOnSuccessListener(documentSnapshot -> {
-                    if (documentSnapshot.exists()) {
-                        currentNote = documentSnapshot.toObject(Note.class);
-                        if (currentNote != null) {
-                            etTitle.setText(currentNote.getTitle());
-                            etContent.setText(currentNote.getContent());
-                            isPinned = currentNote.isPinned();
-                            updatePinIcon();
-                            loadAcceptedUsers();
-                            updateSharePermissions();
-                        }
-                    } else {
-                        Toast.makeText(getContext(), "Không tìm thấy ghi chú", Toast.LENGTH_SHORT).show();
-                        getParentFragmentManager().popBackStack();
-                    }
-                })
-                .addOnFailureListener(e -> {
-                    Toast.makeText(getContext(), "Lỗi tải ghi chú", Toast.LENGTH_SHORT).show();
-                    getParentFragmentManager().popBackStack();
-                });
+        currentNote = localDataStore.notes().findById(noteId);
+        if (currentNote == null) {
+            Toast.makeText(getContext(), "Không tìm thấy ghi chú", Toast.LENGTH_SHORT).show();
+            getParentFragmentManager().popBackStack();
+            return;
+        }
+
+        etTitle.setText(currentNote.getTitle());
+        etContent.setText(currentNote.getContent());
+        isPinned = currentNote.isPinned();
+        updatePinIcon();
+        loadAcceptedUsers();
+        updateSharePermissions();
     }
 
     //load user được chia sẻ
@@ -138,34 +128,24 @@ public class AddEditNoteFragment extends Fragment implements InvitedUserAdapter.
 
         sharedUserList.clear(); // Xóa danh sách cũ
 
-        db.collection("note_invitations")
-                .whereEqualTo("noteId", noteId)
-                .whereEqualTo("status", 1)
-                .get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
-                    if (queryDocumentSnapshots.isEmpty()) {
-                        tvSharedWith.setVisibility(View.GONE);
-                        recyclerViewInvitedUsers.setVisibility(View.GONE);
-                        invitedUserAdapter.setData(sharedUserList);
-                        return;
-                    }
+        List<NoteInvitation> invitations = localDataStore.noteInvitations().getByNoteId(noteId);
+        List<String> acceptedUserIds = new ArrayList<>();
+        for (NoteInvitation invitation : invitations) {
+            if (invitation.getStatus() == 1 && invitation.getInvitedUserId() != null) {
+                acceptedUserIds.add(invitation.getInvitedUserId());
+            }
+        }
 
-                    tvSharedWith.setVisibility(View.VISIBLE);
-                    recyclerViewInvitedUsers.setVisibility(View.VISIBLE);
+        if (acceptedUserIds.isEmpty()) {
+            tvSharedWith.setVisibility(View.GONE);
+            recyclerViewInvitedUsers.setVisibility(View.GONE);
+            invitedUserAdapter.setData(sharedUserList);
+            return;
+        }
 
-                    List<String> acceptedUserIds = new ArrayList<>();
-                    for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
-                        NoteInvitation invitation = doc.toObject(NoteInvitation.class);
-                        acceptedUserIds.add(invitation.getInvitedUserId());
-                    }
-
-                    // Bây giờ, lấy thông tin chi tiết của từng user đã chấp nhận
-                    fetchUserDetails(acceptedUserIds);
-
-                })
-                .addOnFailureListener(e -> {
-                    Log.w(TAG, "Lỗi khi tải danh sách mời: ", e);
-                });
+        tvSharedWith.setVisibility(View.VISIBLE);
+        recyclerViewInvitedUsers.setVisibility(View.VISIBLE);
+        fetchUserDetails(acceptedUserIds);
     }
 
     private void fetchUserDetails(List<String> userIds) {
@@ -175,17 +155,11 @@ public class AddEditNoteFragment extends Fragment implements InvitedUserAdapter.
         }
 
         for (String userId : userIds) {
-            db.collection("users").document(userId).get()
-                    .addOnSuccessListener(documentSnapshot -> {
-                        if (documentSnapshot.exists()) {
-                            User user = documentSnapshot.toObject(User.class);
-                            if (user != null) {
-                                sharedUserList.add(user);
-                                invitedUserAdapter.setData(sharedUserList);
-                            }
-                        }
-                    })
-                    .addOnFailureListener(e -> Log.w(TAG, "Lỗi khi tải user: " + userId, e));
+            User user = localDataStore.users().findById(userId);
+            if (user != null) {
+                sharedUserList.add(user);
+                invitedUserAdapter.setData(sharedUserList);
+            }
         }
     }
 
@@ -262,7 +236,7 @@ public class AddEditNoteFragment extends Fragment implements InvitedUserAdapter.
         isPinned = !isPinned;
         updatePinIcon();
         if (!isNewNote) {
-            db.collection("notes").document(noteId).update("pinned", isPinned);
+            localDataStore.notes().updatePinned(noteId, isPinned);
         }
     }
 
@@ -275,12 +249,8 @@ public class AddEditNoteFragment extends Fragment implements InvitedUserAdapter.
             return;
         }
 
-        WriteBatch batch = db.batch();
-
-        DocumentReference noteRef;
         if (isNewNote) {
-            noteRef = db.collection("notes").document(); // Tạo ID mới
-            noteId = noteRef.getId();
+            noteId = UUID.randomUUID().toString();
             isNewNote = false;
 
             Note newNote = new Note();
@@ -291,35 +261,28 @@ public class AddEditNoteFragment extends Fragment implements InvitedUserAdapter.
             newNote.setPinned(isPinned);
             newNote.setLastEditedBy(currentUserName);
             newNote.setInvitedUserIds(new ArrayList<>());
+            newNote.setCreatedAt(new Date());
+            newNote.setLastEdited(new Date());
 
-            batch.set(noteRef, newNote);
             currentNote = newNote;
+            localDataStore.notes().insert(newNote);
             updateSharePermissions();
         } else {
-            noteRef = db.collection("notes").document(noteId);
-            Map<String, Object> updates = new HashMap<>();
-            updates.put("title", title);
-            updates.put("content", content);
-            updates.put("pinned", isPinned);
-            updates.put("lastEditedBy", currentUserName);
-            updates.put("lastEdited", FieldValue.serverTimestamp()); // Cập nhật thời gian
-
-            batch.update(noteRef, updates);
+            currentNote.setTitle(title);
+            currentNote.setContent(content);
+            currentNote.setPinned(isPinned);
+            currentNote.setLastEditedBy(currentUserName);
+            currentNote.setLastEdited(new Date());
+            localDataStore.notes().insert(currentNote);
         }
 
         // --- LƯU LỊCH SỬ ---
-        DocumentReference versionRef = db.collection("notes").document(noteId)
-                .collection("versions").document();
-
         NoteVersion version = new NoteVersion(noteId, title, content, currentUserId, currentUserName);
-        batch.set(versionRef, version);
+        version.setId(UUID.randomUUID().toString());
+        version.setEditedAt(new Date());
+        localDataStore.noteVersions().insert(version);
 
-        batch.commit()
-                .addOnSuccessListener(aVoid -> {
-                    Toast.makeText(getContext(), "Đã lưu ghi chú", Toast.LENGTH_SHORT).show();
-//                    getParentFragmentManager().popBackStack();
-                })
-                .addOnFailureListener(e -> Toast.makeText(getContext(), "Lỗi khi lưu", Toast.LENGTH_SHORT).show());
+        Toast.makeText(getContext(), "Đã lưu ghi chú", Toast.LENGTH_SHORT).show();
     }
 
     private void openHistoryFragment() {
@@ -340,24 +303,11 @@ public class AddEditNoteFragment extends Fragment implements InvitedUserAdapter.
                 .setTitle("Xóa Ghi chú")
                 .setMessage("Bạn có chắc muốn xóa ghi chú này? Mọi lịch sử và chia sẻ sẽ bị mất vĩnh viễn.")
                 .setPositiveButton("Xóa", (dialog, which) -> {
-                    WriteBatch batch = db.batch();
-                    batch.delete(db.collection("notes").document(noteId));
-
-                    db.collection("notes").document(noteId).collection("versions")
-                            .get()
-                            .addOnCompleteListener(task -> {
-                                if (task.isSuccessful() && task.getResult() != null) {
-                                    for (QueryDocumentSnapshot doc : task.getResult()) {
-                                        batch.delete(doc.getReference());
-                                    }
-                                }
-                                batch.commit()
-                                        .addOnSuccessListener(aVoid -> {
-                                            Toast.makeText(getContext(), "Đã xóa ghi chú", Toast.LENGTH_SHORT);
-                                            getParentFragmentManager().popBackStack(); // Thoát khỏi AddEdit
-                                        })
-                                        .addOnFailureListener(e -> Toast.makeText(getContext(), "Lỗi khi xóa", Toast.LENGTH_SHORT));
-                            });
+                    localDataStore.noteVersions().deleteByNoteId(noteId);
+                    localDataStore.noteInvitations().deleteByNoteId(noteId);
+                    localDataStore.notes().deleteById(noteId);
+                    Toast.makeText(getContext(), "Đã xóa ghi chú", Toast.LENGTH_SHORT).show();
+                    getParentFragmentManager().popBackStack();
                 })
                 .setNegativeButton("Hủy", null)
                 .show();
@@ -381,27 +331,12 @@ public class AddEditNoteFragment extends Fragment implements InvitedUserAdapter.
             recyclerViewInvitedUsers.setVisibility(View.GONE);
         }
 
-        //xóa trong firebase
-        WriteBatch batch = db.batch();
-
-        DocumentReference noteRef = db.collection("notes").document(noteId);
-        batch.update(noteRef, "invitedUserIds", FieldValue.arrayRemove(userIdToRemove));
-
-        db.collection("note_invitations")
-                .whereEqualTo("noteId", noteId)
-                .whereEqualTo("invitedUserId", userIdToRemove)
-                .get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
-                    for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
-                        batch.delete(doc.getReference());
-                    }
-
-                    batch.commit()
-                            .addOnSuccessListener(aVoid -> Toast.makeText(getContext(), "Đã xóa " + user.getUsername(), Toast.LENGTH_SHORT).show())
-                            .addOnFailureListener(e -> handleRemoveUserError(user, position));
-
-                })
-                .addOnFailureListener(e -> handleRemoveUserError(user, position));
+        localDataStore.noteInvitations().deleteByNoteAndUser(noteId, userIdToRemove);
+        if (currentNote != null && currentNote.getInvitedUserIds() != null) {
+            currentNote.getInvitedUserIds().remove(userIdToRemove);
+            localDataStore.notes().insert(currentNote);
+        }
+        Toast.makeText(getContext(), "Đã xóa " + user.getUsername(), Toast.LENGTH_SHORT).show();
     }
 
     private void handleRemoveUserError(User user, int position) {

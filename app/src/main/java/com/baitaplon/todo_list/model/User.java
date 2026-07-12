@@ -1,12 +1,19 @@
 package com.baitaplon.todo_list.model;
 
-import com.google.firebase.firestore.DocumentId;
+import androidx.room.Entity;
+import androidx.room.PrimaryKey;
+import androidx.annotation.NonNull;
 
+@Entity(tableName = "users")
 public class User {
-     @DocumentId
-     private String uid;
+    @PrimaryKey
+    @NonNull
+    private String uid;
     private String username;
     private String email;
+    private String passwordHash;
+    private String passwordSalt;
+
     public User() {
     }
 
@@ -37,5 +44,21 @@ public class User {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public String getPasswordHash() {
+        return passwordHash;
+    }
+
+    public void setPasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
+    }
+
+    public String getPasswordSalt() {
+        return passwordSalt;
+    }
+
+    public void setPasswordSalt(String passwordSalt) {
+        this.passwordSalt = passwordSalt;
     }
 }

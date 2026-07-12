@@ -51,7 +51,7 @@ public class NoteHistoryAdapter extends RecyclerView.Adapter<NoteHistoryAdapter.
         // Hiển thị thông tin chỉnh sửa
         String info = "Chỉnh sửa bởi " + version.getEditorName();
         if (version.getEditedAt() != null) {
-            info += " lúc " + dateFormat.format(version.getEditedAt().toDate());
+            info += " lúc " + dateFormat.format(version.getEditedAt());
         }
         holder.tvVersionInfo.setText(info);
 

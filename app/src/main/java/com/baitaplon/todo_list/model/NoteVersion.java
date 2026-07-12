@@ -1,14 +1,20 @@
 package com.baitaplon.todo_list.model;
 
-import com.google.firebase.Timestamp;
-import com.google.firebase.firestore.ServerTimestamp;
+import androidx.room.Entity;
+import androidx.room.PrimaryKey;
+import androidx.annotation.NonNull;
 
+import java.util.Date;
+
+@Entity(tableName = "note_versions")
 public class NoteVersion {
+    @PrimaryKey
+    @NonNull
     private String id;
     private String noteId;
     private String title;
     private String content;
-    private @ServerTimestamp Timestamp editedAt;
+    private Date editedAt;
     private String editorId;
     private String editorName;
 
@@ -34,8 +40,8 @@ public class NoteVersion {
     public String getContent() { return content; }
     public void setContent(String content) { this.content = content; }
 
-    public Timestamp getEditedAt() { return editedAt; }
-    public void setEditedAt(Timestamp editedAt) { this.editedAt = editedAt; }
+    public Date getEditedAt() { return editedAt; }
+    public void setEditedAt(Date editedAt) { this.editedAt = editedAt; }
 
     public String getEditorId() { return editorId; }
     public void setEditorId(String editorId) { this.editorId = editorId; }

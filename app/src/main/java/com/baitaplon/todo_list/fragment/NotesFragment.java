@@ -22,19 +22,12 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.baitaplon.todo_list.R;
 import com.baitaplon.todo_list.adapter.NoteAdapter;
+import com.baitaplon.todo_list.data.local.LocalDataStore;
 import com.baitaplon.todo_list.model.Note;
-import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.ListenerRegistration;
-import com.google.firebase.firestore.Query;
-import com.google.firebase.firestore.QueryDocumentSnapshot;
-import com.google.firebase.firestore.WriteBatch;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 
 public class NotesFragment extends Fragment implements NoteAdapter.OnNoteClickListener {
     private static final String TAG = "NotesFragment";
@@ -42,18 +35,12 @@ public class NotesFragment extends Fragment implements NoteAdapter.OnNoteClickLi
     private RecyclerView recyclerViewNotes;
     private NoteAdapter noteAdapter;
     private TextView tvNoNotes;
-    private FirebaseFirestore db;
     private String currentUserId;
     private String currentUserName;
     private SearchView searchViewNotes;
     private String currentQuery = ""; // Lưu trữ từ khóa tìm kiếm
-
-    private Map<String, Note> combinedNotesMap = new HashMap<>();
-
-    private ListenerRegistration myNotesListener;
-    private ListenerRegistration sharedInvitationsListener;
-
-    private Map<String, ListenerRegistration> sharedNoteDetailListeners = new HashMap<>();
+    private final List<Note> combinedNotes = new ArrayList<>();
+    private LocalDataStore localDataStore;
 
     @Nullable
     @Override
@@ -65,7 +52,7 @@ public class NotesFragment extends Fragment implements NoteAdapter.OnNoteClickLi
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        db = FirebaseFirestore.getInstance();
+        localDataStore = LocalDataStore.getInstance(requireContext());
         SharedPreferences sharedPreferences = requireActivity().getSharedPreferences("AppPreferences", Context.MODE_PRIVATE);
         currentUserId = sharedPreferences.getString("current_user_id", null);
         currentUserName = sharedPreferences.getString("current_user_name", null);
@@ -118,131 +105,38 @@ public class NotesFragment extends Fragment implements NoteAdapter.OnNoteClickLi
     }
 
     private void loadNotes() {
-        if (myNotesListener != null) myNotesListener.remove();
-        if (sharedInvitationsListener != null) sharedInvitationsListener.remove();
-        clearSharedNoteDetailListeners();
+        combinedNotes.clear();
 
-        combinedNotesMap.clear();
-
-        // Query 1: my note
-        Query myNotesQuery = db.collection("notes")
-                .whereEqualTo("creatorId", currentUserId);
-
-        myNotesListener = myNotesQuery.addSnapshotListener((snapshots, e) -> {
-            if (e != null) {
-                Log.e(TAG, "Listen failed for my notes.", e);
-                return;
-            }
-            if (snapshots != null) {
-                List<String> newNoteIds = new ArrayList<>();
-                for (QueryDocumentSnapshot doc : snapshots) {
-                    Note note = doc.toObject(Note.class);
-                    note.setId(doc.getId());
-                    combinedNotesMap.put(note.getId(), note); // Thêm hoặc cập nhật
-                    newNoteIds.add(note.getId());
-                }
-
-                List<String> idsToRemove = new ArrayList<>();
-                for (Map.Entry<String, Note> entry : combinedNotesMap.entrySet()) {
-                    if (entry.getValue().getCreatorId().equals(currentUserId)) {
-                        if (!newNoteIds.contains(entry.getKey())) {
-                            idsToRemove.add(entry.getKey());
-                        }
-                    }
-                }
-
-                for (String id : idsToRemove) {
-                    Log.d(TAG, "Removing deleted 'my note' from map: " + id);
-                    combinedNotesMap.remove(id);
-                }
-            }
-            mergeAndDisplayNotes();
-        });
-
-        // Query 2: Ghi chú status == 1
-        Query sharedInvitationsQuery = db.collection("note_invitations")
-                .whereEqualTo("invitedUserId", currentUserId)
-                .whereEqualTo("status", 1); // 1 = accepted
-
-        sharedInvitationsListener = sharedInvitationsQuery.addSnapshotListener((snapshots, e) -> {
-            if (e != null) {
-                Log.e(TAG, "Listen failed for shared invitations.", e);
-                return;
-            }
-
-            if (snapshots == null || snapshots.isEmpty()) {
-                clearSharedNoteDetailListeners();
-                mergeAndDisplayNotes();
-                return;
-            }
-
-            List<String> currentSharedNoteIds = new ArrayList<>();
-            for (QueryDocumentSnapshot doc : snapshots) {
-                String noteId = doc.getString("noteId");
-                if (noteId != null && !noteId.isEmpty()) {
-                    currentSharedNoteIds.add(noteId);
-
-                    if (!sharedNoteDetailListeners.containsKey(noteId)) {
-                        Log.d(TAG, "Adding new listener for shared note: " + noteId);
-
-                        ListenerRegistration detailListener = db.collection("notes").document(noteId)
-                                .addSnapshotListener((noteSnapshot, error) -> {
-                                    if (error != null) {
-                                        Log.w(TAG, "Listen failed for shared note " + noteId, error);
-                                        combinedNotesMap.remove(noteId);
-                                        mergeAndDisplayNotes();
-                                        return;
-                                    }
-
-                                    if (noteSnapshot != null && noteSnapshot.exists()) {
-                                        Note note = noteSnapshot.toObject(Note.class);
-                                        note.setId(noteSnapshot.getId());
-                                        combinedNotesMap.put(note.getId(), note);
-                                    } else {
-                                        combinedNotesMap.remove(noteId);
-                                    }
-                                    mergeAndDisplayNotes();
-                                });
-
-                        sharedNoteDetailListeners.put(noteId, detailListener);
-                    }
-                }
-            }
-
-            List<String> listenersToRemove = new ArrayList<>();
-            for (String listeningNoteId : sharedNoteDetailListeners.keySet()) {
-                if (!currentSharedNoteIds.contains(listeningNoteId)) {
-                    listenersToRemove.add(listeningNoteId);
-                }
-            }
-
-            for (String noteIdToRemove : listenersToRemove) {
-                Log.d(TAG, "Removing old listener for shared note: " + noteIdToRemove);
-                sharedNoteDetailListeners.get(noteIdToRemove).remove();
-                sharedNoteDetailListeners.remove(noteIdToRemove);
-                combinedNotesMap.remove(noteIdToRemove);
-            }
-
-            mergeAndDisplayNotes();
-        });
-    }
-
-    private void clearSharedNoteDetailListeners() {
-        for (ListenerRegistration listener : sharedNoteDetailListeners.values()) {
-            listener.remove();
+        List<Note> myNotes = localDataStore.notes().getNotesByCreator(currentUserId);
+        if (myNotes != null) {
+            combinedNotes.addAll(myNotes);
         }
-        sharedNoteDetailListeners.clear();
+
+        List<String> sharedNoteIds = new ArrayList<>();
+        localDataStore.noteInvitations().getByUserAndStatus(currentUserId, 1)
+                .forEach(invitation -> {
+                    if (invitation.getNoteId() != null && !sharedNoteIds.contains(invitation.getNoteId())) {
+                        sharedNoteIds.add(invitation.getNoteId());
+                    }
+                });
+
+        for (String sharedNoteId : sharedNoteIds) {
+            Note sharedNote = localDataStore.notes().findById(sharedNoteId);
+            if (sharedNote != null) {
+                combinedNotes.add(sharedNote);
+            }
+        }
+
+        mergeAndDisplayNotes();
     }
 
     private void mergeAndDisplayNotes() {
-        List<Note> combinedList = new ArrayList<>(combinedNotesMap.values());
-
         List<Note> filteredList = new ArrayList<>();
         if (currentQuery.isEmpty()) {
-            filteredList.addAll(combinedList);
+            filteredList.addAll(combinedNotes);
         } else {
             String lowerCaseQuery = currentQuery.toLowerCase(Locale.getDefault());
-            for (Note note : combinedList) {
+            for (Note note : combinedNotes) {
                 if (note.getTitle() != null && note.getTitle().toLowerCase(Locale.getDefault()).contains(lowerCaseQuery)) {
                     filteredList.add(note);
                 } else if (note.getContent() != null && note.getContent().toLowerCase(Locale.getDefault()).contains(lowerCaseQuery)) {
@@ -251,7 +145,7 @@ public class NotesFragment extends Fragment implements NoteAdapter.OnNoteClickLi
             }
         }
 
-        Collections.sort(filteredList, (o1, o2) -> {
+        filteredList.sort((o1, o2) -> {
             if (o1.isPinned() != o2.isPinned()) {
                 return o1.isPinned() ? -1 : 1;
             }
@@ -299,10 +193,8 @@ public class NotesFragment extends Fragment implements NoteAdapter.OnNoteClickLi
             Toast.makeText(getContext(), "Lỗi: Không tìm thấy ID ghi chú", Toast.LENGTH_SHORT).show();
             return;
         }
-        db.collection("notes").document(note.getId())
-                .update("pinned", isPinned)
-                .addOnSuccessListener(aVoid -> Log.d(TAG, "Note pin status updated."))
-                .addOnFailureListener(e -> Toast.makeText(getContext(), "Lỗi ghim ghi chú", Toast.LENGTH_SHORT).show());
+        localDataStore.notes().updatePinned(note.getId(), isPinned);
+        loadNotes();
     }
 
     @Override
@@ -326,39 +218,14 @@ public class NotesFragment extends Fragment implements NoteAdapter.OnNoteClickLi
     }
 
     private void deleteNoteAndHistory(String noteId) {
-        WriteBatch batch = db.batch();
-        batch.delete(db.collection("notes").document(noteId));
-
-        db.collection("notes").document(noteId).collection("versions")
-                .get()
-                .addOnCompleteListener(task -> {
-                    if (task.isSuccessful() && task.getResult() != null) {
-                        for (QueryDocumentSnapshot doc : task.getResult()) {
-                            batch.delete(doc.getReference());
-                        }
-                    }
-
-                    db.collection("note_invitations").whereEqualTo("noteId", noteId)
-                            .get()
-                            .addOnCompleteListener(invitationTask -> {
-                                if (invitationTask.isSuccessful() && invitationTask.getResult() != null) {
-                                    for (QueryDocumentSnapshot doc : invitationTask.getResult()) {
-                                        batch.delete(doc.getReference());
-                                    }
-                                }
-
-                                batch.commit()
-                                        .addOnSuccessListener(aVoid -> Toast.makeText(getContext(), "Đã xóa ghi chú", Toast.LENGTH_SHORT))
-                                        .addOnFailureListener(e -> Toast.makeText(getContext(), "Lỗi khi xóa ghi chú", Toast.LENGTH_SHORT).show());
-                            });
-                });
+        localDataStore.noteVersions().deleteByNoteId(noteId);
+        localDataStore.noteInvitations().deleteByNoteId(noteId);
+        localDataStore.notes().deleteById(noteId);
+        loadNotes();
     }
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        if (myNotesListener != null) myNotesListener.remove();
-        if (sharedInvitationsListener != null) sharedInvitationsListener.remove();
-        clearSharedNoteDetailListeners();
     }
 }

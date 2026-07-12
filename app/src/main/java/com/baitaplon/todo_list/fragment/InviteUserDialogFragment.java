@@ -1,6 +1,7 @@
 package com.baitaplon.todo_list.fragment;
 
 import android.os.Bundle;
+import android.content.Context;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
@@ -19,21 +20,17 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.baitaplon.todo_list.R;
+import com.baitaplon.todo_list.data.local.LocalDataStore;
 import com.baitaplon.todo_list.adapter.UserSearchAdapter;
+import com.baitaplon.todo_list.model.Note;
 import com.baitaplon.todo_list.model.NoteInvitation;
 import com.baitaplon.todo_list.model.Notification;
 import com.baitaplon.todo_list.model.User;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.firestore.DocumentReference;
-import com.google.firebase.firestore.FieldValue;
-import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.Query;
-import com.google.firebase.firestore.QueryDocumentSnapshot;
-import com.google.firebase.firestore.WriteBatch;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Date;
+import java.util.UUID;
 
 public class InviteUserDialogFragment extends DialogFragment implements UserSearchAdapter.OnInviteClickListener {
     private static final String TAG = "InviteUserDialog";
@@ -45,8 +42,7 @@ public class InviteUserDialogFragment extends DialogFragment implements UserSear
     private RecyclerView recyclerViewSearchResults;
     private ProgressBar progressBarSearch;
     private TextView tvNoResults;
-    private FirebaseFirestore db;
-    private FirebaseUser currentUser;
+    private LocalDataStore localDataStore;
     private UserSearchAdapter adapter;
     private List<User> userList;
 
@@ -68,11 +64,8 @@ public class InviteUserDialogFragment extends DialogFragment implements UserSear
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        db = FirebaseFirestore.getInstance();
-        currentUser = FirebaseAuth.getInstance().getCurrentUser();
-        if (currentUser != null) {
-            currentUserId = currentUser.getUid();
-        }
+        localDataStore = LocalDataStore.getInstance(requireContext());
+        currentUserId = getActivity() != null ? getActivity().getSharedPreferences("AppPreferences", Context.MODE_PRIVATE).getString("current_user_id", null) : null;
 
         if (getArguments() != null) {
             noteId = getArguments().getString(ARG_NOTE_ID);
@@ -128,25 +121,13 @@ public class InviteUserDialogFragment extends DialogFragment implements UserSear
         tvNoResults.setVisibility(View.GONE);
         recyclerViewSearchResults.setVisibility(View.GONE);
 
-        Query emailQuery = db.collection("users")
-                .whereGreaterThanOrEqualTo("email", query)
-                .whereLessThanOrEqualTo("email", query + "\uf8ff");
-
-        emailQuery.get().addOnCompleteListener(task -> {
-            if (task.isSuccessful()) {
-                userList.clear();
-                for (QueryDocumentSnapshot document : task.getResult()) {
-                    User user = document.toObject(User.class);
-                    if (!user.getUid().equals(currentUserId)) {
-                        userList.add(user);
-                    }
-                }
-                updateUIBasedOnResults();
-            } else {
-                Log.w(TAG, "Lỗi khi tìm kiếm user: ", task.getException());
-                progressBarSearch.setVisibility(View.GONE);
+        userList.clear();
+        for (User user : localDataStore.users().search(query)) {
+            if (user.getUid() != null && !user.getUid().equals(currentUserId)) {
+                userList.add(user);
             }
-        });
+        }
+        updateUIBasedOnResults();
     }
 
     private void updateUIBasedOnResults() {
@@ -167,44 +148,41 @@ public class InviteUserDialogFragment extends DialogFragment implements UserSear
             Toast.makeText(getContext(), "Lỗi: Không thể gửi lời mời", Toast.LENGTH_SHORT).show();
             return;
         }
-        WriteBatch batch = db.batch();
-
-        DocumentReference invitationRef = db.collection("note_invitations").document();
-        String invitationId = invitationRef.getId();
 
         NoteInvitation invitation = new NoteInvitation();
-        invitation.setId(invitationId);
+        invitation.setId(UUID.randomUUID().toString());
         invitation.setNoteId(noteId);
         invitation.setNoteTitle(noteTitle);
         invitation.setHostId(currentUserId);
         invitation.setInvitedUserId(user.getUid());
         invitation.setStatus(0); // 0 = pending
 
-        batch.set(invitationRef, invitation);
+        localDataStore.noteInvitations().insert(invitation);
 
-        DocumentReference notificationRef = db.collection("notifications").document();
         Notification notification = new Notification();
-        notification.setId(notificationRef.getId());
+        notification.setId(UUID.randomUUID().toString());
         notification.setUserId(user.getUid());
         notification.setType("note_invitation");
         String message = currentUserName + " đã mời bạn cộng tác vào ghi chú: " + noteTitle;
         notification.setMessage(message);
-        notification.setReferenceId(invitationId);
+        notification.setReferenceId(invitation.getId());
         notification.setRead(false);
+        notification.setCreatedAt(new Date());
 
-        batch.set(notificationRef, notification);
+        localDataStore.notifications().insert(notification);
 
-        DocumentReference noteRef = db.collection("notes").document(noteId);
-        batch.update(noteRef, "invitedUserIds", FieldValue.arrayUnion(user.getUid()));
+        Note note = localDataStore.notes().findById(noteId);
+        if (note != null) {
+            if (note.getInvitedUserIds() == null) {
+                note.setInvitedUserIds(new ArrayList<>());
+            }
+            if (!note.getInvitedUserIds().contains(user.getUid())) {
+                note.getInvitedUserIds().add(user.getUid());
+                localDataStore.notes().insert(note);
+            }
+        }
 
-        batch.commit()
-                .addOnSuccessListener(aVoid -> {
-                    Toast.makeText(getContext(), "Đã gửi lời mời tới " + user.getUsername(), Toast.LENGTH_SHORT).show();
-                })
-                .addOnFailureListener(e -> {
-                    Toast.makeText(getContext(), "Gửi lời mời thất bại", Toast.LENGTH_SHORT).show();
-                    Log.w(TAG, "Lỗi khi tạo lời mời và thông báo: ", e);
-                });
+        Toast.makeText(getContext(), "Đã gửi lời mời tới " + user.getUsername(), Toast.LENGTH_SHORT).show();
     }
 
     @Override

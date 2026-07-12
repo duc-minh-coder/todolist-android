@@ -14,18 +14,19 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.baitaplon.todo_list.R;
+import com.baitaplon.todo_list.data.local.LocalDataStore;
 import com.baitaplon.todo_list.adapter.NotificationAdapter;
 import com.baitaplon.todo_list.model.Notification;
+import com.baitaplon.todo_list.model.NoteInvitation;
 import com.baitaplon.todo_list.model.Schedule;
+import com.baitaplon.todo_list.model.ScheduleInvitation;
 import com.baitaplon.todo_list.util.AlarmScheduler;
-import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.ListenerRegistration;
-import com.google.firebase.firestore.Query;
-import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Date;
+import java.util.UUID;
 
 public class NotificationsActivity extends AppCompatActivity implements NotificationAdapter.NotificationClickListener {
 
@@ -37,9 +38,8 @@ public class NotificationsActivity extends AppCompatActivity implements Notifica
     private NotificationAdapter adapter;
     private List<Notification> notificationList = new ArrayList<>();
 
-    private FirebaseFirestore db;
+    private LocalDataStore localDataStore;
     private String currentUserId;
-    private ListenerRegistration notificationListener;
     private String currentUsername;
 
     @Override
@@ -47,7 +47,7 @@ public class NotificationsActivity extends AppCompatActivity implements Notifica
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_notifications);
 
-        db = FirebaseFirestore.getInstance();
+        localDataStore = LocalDataStore.getInstance(this);
 
         SharedPreferences sharedPreferences = getSharedPreferences("AppPreferences", Context.MODE_PRIVATE);
         currentUserId = sharedPreferences.getString("current_user_id", null);
@@ -74,15 +74,9 @@ public class NotificationsActivity extends AppCompatActivity implements Notifica
     }
 
     private void fetchCurrentUsername() {
-        db.collection("users").document(currentUserId).get()
-                .addOnSuccessListener(documentSnapshot -> {
-                    if (documentSnapshot.exists()) {
-                        currentUsername = documentSnapshot.getString("username");
-                    } else {
-                        currentUsername = "Một người dùng";
-                    }
-                })
-                .addOnFailureListener(e -> currentUsername = "Một người dùng");
+        currentUsername = localDataStore.users().findById(currentUserId) != null
+                ? localDataStore.users().findById(currentUserId).getUsername()
+                : "Một người dùng";
     }
 
     private void setupRecyclerView() {
@@ -92,34 +86,13 @@ public class NotificationsActivity extends AppCompatActivity implements Notifica
     }
 
     private void loadNotifications() {
-        if (notificationListener != null) {
-            notificationListener.remove();
+        notificationList.clear();
+        List<Notification> stored = localDataStore.notifications().getByUser(currentUserId);
+        if (stored != null) {
+            notificationList.addAll(stored);
         }
-
-        // Query: Lấy tất cả thông báo cho user này, sắp xếp theo thời gian mới nhất
-        Query query = db.collection("notifications")
-                .whereEqualTo("userId", currentUserId)
-                .orderBy("createdAt", Query.Direction.DESCENDING)
-                .limit(50); // Giới hạn 50 thông báo gần nhất
-
-        // Lắng nghe thời gian thực
-        notificationListener = query.addSnapshotListener((snapshots, e) -> {
-            if (e != null) {
-                Log.e(TAG, "Listen failed.", e);
-                return;
-            }
-
-            notificationList.clear();
-            if (snapshots != null) {
-                for (QueryDocumentSnapshot doc : snapshots) {
-                    Notification notification = doc.toObject(Notification.class);
-                    notificationList.add(notification);
-                }
-            }
-
-            adapter.setData(notificationList);
-            checkIfEmpty();
-        });
+        adapter.setData(notificationList);
+        checkIfEmpty();
     }
 
     // Kiểm tra và hiển thị "Không có thông báo"
@@ -136,9 +109,6 @@ public class NotificationsActivity extends AppCompatActivity implements Notifica
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (notificationListener != null) {
-            notificationListener.remove();
-        }
     }
 
     @Override
@@ -154,42 +124,25 @@ public class NotificationsActivity extends AppCompatActivity implements Notifica
     private void setAlarmForAcceptedSchedule(String invitationId) {
         if (invitationId == null) return;
 
-        // Bước 1: Tìm bản ghi lời mời trong 'schedule_invitations' để lấy scheduleId
-        db.collection("schedule_invitations").document(invitationId).get()
-                .addOnSuccessListener(invitationSnapshot -> {
-                    if (invitationSnapshot.exists()) {
-                        String scheduleId = invitationSnapshot.getString("scheduleId");
-                        if (scheduleId != null) {
-                            // Bước 2: Lấy chi tiết lịch trình từ 'schedules'
-                            fetchScheduleAndSetAlarm(scheduleId);
-                        }
-                    }
-                })
-                .addOnFailureListener(e -> Log.e(TAG, "Lỗi khi lấy thông tin lời mời để đặt báo thức", e));
+        ScheduleInvitation invitation = localDataStore.scheduleInvitations().getByScheduleId(invitationId).stream()
+                .filter(item -> invitationId.equals(item.getId()))
+                .findFirst()
+                .orElse(null);
+        if (invitation != null && invitation.getScheduleId() != null) {
+            fetchScheduleAndSetAlarm(invitation.getScheduleId());
+        }
     }
 
     private void fetchScheduleAndSetAlarm(String scheduleId) {
-        db.collection("schedules").document(scheduleId).get()
-                .addOnSuccessListener(scheduleSnapshot -> {
-                    if (scheduleSnapshot.exists()) {
-                        Schedule schedule = scheduleSnapshot.toObject(Schedule.class);
-
-                        // Kiểm tra xem lịch trình có hợp lệ và có cài báo thức không
-                        if (schedule != null && schedule.getStartTime() != null) {
-                            // Kiểm tra thời gian xem có ở tương lai không
-                            long nowMillis = System.currentTimeMillis();
-                            long triggerTime = schedule.getStartTime().toDate().getTime();
-
-                            if (triggerTime > nowMillis && schedule.getAlarmOption() != null && schedule.getAlarmOption() > 0) {
-                                // GỌI ALARM SCHEDULER ĐỂ CÀI BÁO THỨC TRÊN MÁY NGƯỜI ĐƯỢC MỜI
-                                AlarmScheduler.scheduleAlarm(NotificationsActivity.this, schedule);
-                                Toast.makeText(NotificationsActivity.this, "Đã thêm lịch và đặt báo thức!", Toast.LENGTH_SHORT).show();
-                                Log.d(TAG, "Đã đặt báo thức cho lịch được mời: " + schedule.getTitle());
-                            }
-                        }
-                    }
-                })
-                .addOnFailureListener(e -> Log.e(TAG, "Lỗi khi lấy chi tiết lịch trình", e));
+        Schedule schedule = localDataStore.schedules().findById(scheduleId);
+        if (schedule != null && schedule.getStartTime() != null) {
+            long nowMillis = System.currentTimeMillis();
+            long triggerTime = schedule.getStartTime().getTime();
+            if (triggerTime > nowMillis && schedule.getAlarmOption() != null && schedule.getAlarmOption() > 0) {
+                AlarmScheduler.scheduleAlarm(NotificationsActivity.this, schedule);
+                Toast.makeText(NotificationsActivity.this, "Đã thêm lịch và đặt báo thức!", Toast.LENGTH_SHORT).show();
+            }
+        }
     }
 
     @Override
@@ -207,9 +160,7 @@ public class NotificationsActivity extends AppCompatActivity implements Notifica
         }
 
         if (!notification.isRead()) {
-            db.collection("notifications").document(notification.getId())
-                    .update("read", true)
-                    .addOnSuccessListener(aVoid -> Log.d(TAG, "Notification marked as read."));
+            localDataStore.notifications().updateRead(notification.getId(), true);
             loadNotifications();
         }
     }
@@ -219,49 +170,26 @@ public class NotificationsActivity extends AppCompatActivity implements Notifica
         if (invitationId == null) return;
         if (currentUsername == null) currentUsername = "Một người dùng"; // Đảm bảo username không null
 
-        // Xác định collection invitation
-        String collectionPath;
-        if (originalNotification.getType().equals("schedule_invitation")) {
-            collectionPath = "schedule_invitations";
-        } else if (originalNotification.getType().equals("note_invitation")) {
-            collectionPath = "note_invitations";
-        } else {
+        String title = originalNotification.getType().equals("schedule_invitation")
+                ? localDataStore.scheduleInvitations().getByScheduleId(invitationId).stream().findFirst().map(ScheduleInvitation::getScheduleTitle).orElse("")
+                : localDataStore.noteInvitations().getByNoteId(invitationId).stream().findFirst().map(NoteInvitation::getNoteTitle).orElse("");
+
+        String hostId = originalNotification.getType().equals("schedule_invitation")
+                ? localDataStore.scheduleInvitations().getByScheduleId(invitationId).stream().findFirst().map(ScheduleInvitation::getHostId).orElse(null)
+                : localDataStore.noteInvitations().getByNoteId(invitationId).stream().findFirst().map(NoteInvitation::getHostId).orElse(null);
+
+        if (hostId == null) {
             return;
         }
 
-        // Lấy thông tin của lời mời gốc để tìm hostId và tiêu đề
-        db.collection(collectionPath).document(invitationId).get()
-                .addOnSuccessListener(documentSnapshot -> {
-                    if (!documentSnapshot.exists()) {
-                        Log.e(TAG, "Invitation document not found!");
-                        return;
-                    }
-
-                    // Lấy ID của người host (người đã mời mình)
-                    String hostId = documentSnapshot.getString("hostId");
-                    String title = documentSnapshot.contains("scheduleTitle") ?
-                            documentSnapshot.getString("scheduleTitle") :
-                            documentSnapshot.getString("noteTitle");
-
-                    if (hostId == null) {
-                        Log.e(TAG, "Host ID is null in invitation!");
-                        return;
-                    }
-
-                    // Tạo thông báo mới
-                    Notification responseNotif = new Notification();
-                    responseNotif.setUserId(hostId); // Gửi cho người host
-                    responseNotif.setType("reminder"); // Chỉ là thông báo nhắc nhở, không cần hành động
-                    responseNotif.setMessage(currentUsername + " " + responseAction + " lời mời của bạn: " + title);
-                    responseNotif.setRead(false);
-
-                    // Gửi thông báo mới lên collection "notifications"
-                    db.collection("notifications").add(responseNotif)
-                            .addOnSuccessListener(documentReference -> Log.d(TAG, "Response notification sent to host: " + hostId))
-                            .addOnFailureListener(e -> Log.e(TAG, "Error sending response notification", e));
-
-                })
-                .addOnFailureListener(e -> Log.e(TAG, "Error fetching invitation details for response", e));
+        Notification responseNotif = new Notification();
+        responseNotif.setId(UUID.randomUUID().toString());
+        responseNotif.setUserId(hostId);
+        responseNotif.setType("reminder");
+        responseNotif.setMessage(currentUsername + " " + responseAction + " lời mời của bạn: " + title);
+        responseNotif.setRead(false);
+        responseNotif.setCreatedAt(new Date());
+        localDataStore.notifications().insert(responseNotif);
     }
 
     // Hàm chung để cập nhật lời mời (schedule hoặc note)
@@ -278,21 +206,28 @@ public class NotificationsActivity extends AppCompatActivity implements Notifica
             return; // Không phải loại thông báo lời mời
         }
 
-        // Cập nhật status
-        db.collection(collectionPath).document(invitationId)
-                .update("status", status)
-                .addOnSuccessListener(aVoid -> Log.d(TAG, "Invitation status updated to " + status))
-                .addOnFailureListener(e -> Log.e(TAG, "Error updating invitation status", e));
+        if (notification.getType().equals("schedule_invitation")) {
+            ScheduleInvitation invitation = localDataStore.scheduleInvitations().getByScheduleId(invitationId).stream()
+                    .filter(item -> invitationId.equals(item.getId()))
+                    .findFirst().orElse(null);
+            if (invitation != null) {
+                invitation.setStatus(status);
+                localDataStore.scheduleInvitations().insert(invitation);
+            }
+        } else if (notification.getType().equals("note_invitation")) {
+            NoteInvitation invitation = localDataStore.noteInvitations().getByNoteId(invitationId).stream()
+                    .filter(item -> invitationId.equals(item.getId()))
+                    .findFirst().orElse(null);
+            if (invitation != null) {
+                invitation.setStatus(status);
+                localDataStore.noteInvitations().insert(invitation);
+            }
+        }
     }
 
     // Hàm xóa thông báo (sau khi đã xử lý)
     private void deleteNotification(Notification notification, int position) {
-        db.collection("notifications").document(notification.getId())
-                .delete()
-                .addOnSuccessListener(aVoid -> {
-                    Log.d(TAG, "Notification deleted.");
-                     adapter.removeItem(position); // Không cần nếu dùng listener
-                })
-                .addOnFailureListener(e -> Log.e(TAG, "Error deleting notification", e));
+        localDataStore.notifications().deleteById(notification.getId());
+        adapter.removeItem(position);
     }
 }

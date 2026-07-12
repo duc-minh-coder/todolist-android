@@ -15,15 +15,12 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.baitaplon.todo_list.R;
 import com.baitaplon.todo_list.model.Schedule;
-import com.google.firebase.Timestamp; // Import Timestamp
 
 import java.text.SimpleDateFormat; // Import SimpleDateFormat
-import java.time.LocalDate;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale; // Import Locale
-import java.util.TimeZone; // Import TimeZone
 
 public class ScheduleAdapter extends RecyclerView.Adapter<ScheduleAdapter.ScheduleViewHolder> {
     private static final int VIEW_TYPE_PRIMARY = 1;
@@ -62,7 +59,7 @@ public class ScheduleAdapter extends RecyclerView.Adapter<ScheduleAdapter.Schedu
         Calendar todayCal = Calendar.getInstance();
         String todayDateString = dateFormatter.format(todayCal.getTime());
 
-        Date itemStartDate = item.getStartTime().toDate();
+        Date itemStartDate = item.getStartTime();
         String itemDateString = dateFormatter.format(itemStartDate);
 
         if (itemDateString.equals(todayDateString)) {
@@ -99,8 +96,7 @@ public class ScheduleAdapter extends RecyclerView.Adapter<ScheduleAdapter.Schedu
         // --- XỬ LÝ ẨN HIỆN NGÀY (Timestamp) ---
         String dayOfMonth = "?";
         if (currentSchedule.getStartTime() != null) {
-            dayOfMonth = dayFormatter.format(currentSchedule.getStartTime().toDate());
-//            dayOfMonth = dayFormatter.format(LocalDate.now().getDayOfMonth());
+            dayOfMonth = dayFormatter.format(currentSchedule.getStartTime());
         }
         holder.tvDay.setText(dayOfMonth);
 
@@ -109,8 +105,8 @@ public class ScheduleAdapter extends RecyclerView.Adapter<ScheduleAdapter.Schedu
         } else {
             Schedule previousSchedule = scheduleList.get(position - 1);
             if (currentSchedule.getStartTime() != null && previousSchedule.getStartTime() != null) {
-                String currentDatePart = dateFormatter.format(currentSchedule.getStartTime().toDate());
-                String previousDatePart = dateFormatter.format(previousSchedule.getStartTime().toDate());
+                String currentDatePart = dateFormatter.format(currentSchedule.getStartTime());
+                String previousDatePart = dateFormatter.format(previousSchedule.getStartTime());
 
                 if (currentDatePart.equals(previousDatePart)) {
                     holder.tvDay.setVisibility(View.INVISIBLE);

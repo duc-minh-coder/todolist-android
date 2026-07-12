@@ -1,9 +1,13 @@
 package com.baitaplon.todo_list.model;
 
-import com.google.firebase.firestore.DocumentId;
+import androidx.room.Entity;
+import androidx.room.PrimaryKey;
+import androidx.annotation.NonNull;
 
+@Entity(tableName = "schedule_invitations")
 public class ScheduleInvitation {
-    @DocumentId
+    @PrimaryKey
+    @NonNull
     private String id; // ID của lời mời
     private String scheduleId;
     private String hostId;
