@@ -6,6 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/img_background"
+    android:layout_marginTop="20dp"
     tools:context=".activity.MainActivity">
 
     <LinearLayout
