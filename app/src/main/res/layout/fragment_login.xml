@@ -34,7 +34,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="0dp"
-            android:text="on.time"
+            android:text="todo-app"
             android:textColor="@color/text_primary"
             android:textSize="40sp"
             android:textStyle="bold" />

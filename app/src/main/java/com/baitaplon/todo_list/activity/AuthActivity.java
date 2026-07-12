@@ -22,8 +22,9 @@ public class AuthActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_auth);
 
+        // kiểm tra activity có đc tạo mới hoàn toàn k
         if (savedInstanceState == null) {
-            replaceFragment(new LoginFragment(), false);
+            replaceFragment(new LoginFragment(), false); // hiện màn đăng nhập
         }
     }
 
