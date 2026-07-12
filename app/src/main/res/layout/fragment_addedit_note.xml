@@ -7,6 +7,7 @@
     android:orientation="vertical"
     android:background="@drawable/bg_tab_selected"
     tools:context=".fragment.AddEditNoteFragment"
+    android:layout_marginTop="20dp"
     >
 
     <com.google.android.material.appbar.AppBarLayout
